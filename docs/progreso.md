@@ -4,8 +4,8 @@ Estados: pendiente · en curso · pendiente de comprobación manual · terminado
 
 | Paso | Corresponde a | Estado |
 | --- | --- | --- |
-| 00 · Preparar el proyecto | Preparación | pendiente de comprobación manual |
-| 01 · Catálogo y tarjeta | O1 | pendiente |
+| 00 · Preparar el proyecto | Preparación | terminado |
+| 01 · Catálogo y tarjeta | O1 | terminado |
 | 02 · Añadir y vaciar carrito | O2 · parte 1 | pendiente |
 | 03 · Buscador controlado | O2 · parte 2 | pendiente |
 | 04 · Carga y estados de petición | O3 | pendiente |
@@ -54,3 +54,32 @@ En `src/` está el código que se compila: Vite lo transforma (TypeScript → Ja
 **Dudas / decisiones**
 
 - La carpeta no era repositorio git: se inicializa en local para hacer un commit por obligatorio.
+
+---
+
+## Paso 01 · Catálogo y tarjeta (O1)
+
+**Cambios**
+
+- `src/coffee-card.tsx`: componente `CoffeeCard` con props tipadas (`CoffeeCardProps { coffee: Coffee }`). Muestra nombre, origen y precio con `toFixed(2)`.
+- `src/app.tsx`: array `coffees: Coffee[]` con los tres primeros cafés del JSON, título, frase `{coffees.length} cafés este mes` y lista con `map` y `key={coffee.id}`. Rejilla `grid gap-4 sm:grid-cols-2`; tarjeta con fondo, borde y sombra.
+
+**Decisiones**
+
+- El array está fuera de `App`: son datos fijos, no cambian entre renders, así que no hace falta recrearlos en cada render (y no es estado).
+- La lista es `<ul>`/`<li>` y la tarjeta un `<article>` con `<h2>`: HTML semántico para lectores de pantalla.
+- La `key` va en el `<li>`, que es el elemento que devuelve el `map`, no dentro de `CoffeeCard`.
+
+**Comprobaciones hechas por la IA**
+
+- `npm run build`: sin errores.
+
+**Comprobaciones hechas por la persona**
+
+1. Tres tarjetas y "3 cafés este mes".
+2. Cuarto café temporal en el array: aparece la tarjeta y el número cambia solo. (La primera vez se añadió por error al JSON; se restauró.)
+3. Sin `key`: aviso en consola. Cambios temporales deshechos después.
+
+**Pendiente**
+
+- Respuesta 📝 de O1 (aviso sin `key` e id frente a índice), con palabras de la persona.

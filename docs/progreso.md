@@ -8,7 +8,7 @@ Estados: pendiente · en curso · pendiente de comprobación manual · terminado
 | 01 · Catálogo y tarjeta | O1 | terminado |
 | 02 · Añadir y vaciar carrito | O2 · parte 1 | terminado |
 | 03 · Buscador controlado | O2 · parte 2 | terminado |
-| 04 · Carga y estados de petición | O3 | pendiente |
+| 04 · Carga y estados de petición | O3 | terminado |
 | 05 · Extraer useCoffees | O4 · parte 1 | pendiente |
 | 06 · Foco con useRef | O4 · parte 2 | pendiente |
 | 07 · Infraestructura de rutas | O5 · parte 1 | pendiente |
@@ -151,3 +151,37 @@ Porque se puede calcular a partir de `cart` en cada render: es un dato derivado,
 **Comprensión: ¿qué problemas introduce guardar también la lista filtrada en un estado?**
 
 La lista filtrada depende de dos datos, `coffees` y `search`. Si fuera un estado, habría que actualizarla a mano cada vez que cambiara cualquiera de los dos; basta con olvidarse en un sitio para que la lista mostrada no coincida con la búsqueda ni con los cafés reales. Además, si se sincronizase con un `useEffect`, cada tecla provocaría dos renders y el primero pintaría la lista antigua. Como filtrar es un cálculo barato, es más simple y seguro recalcularla en cada render: así siempre es correcta.
+
+---
+
+## Paso 04 · Carga y estados de petición (O3)
+
+**Cambios**
+
+- Eliminado el array escrito a mano de `app.tsx`.
+- Tres estados nuevos: `coffees` (`[]`), `loading` (`true`), `error` (`string | null`).
+- `useEffect(..., [])` con `fetch("/coffees.json", { signal })`; se comprueba `response.ok` y se lanza un error si no lo es.
+- Limpieza: el efecto devuelve `() => controller.abort()`. En el `catch`, si la señal está abortada se ignora (no es un error de carga).
+- Render: "Cargando…" (`role="status"`), mensaje de error (`role="alert"`) o la lista con "N cafés este mes" y el filtro.
+
+**Decisiones**
+
+- `loading` empieza en `true` porque la petición sale nada más montar.
+- No se usa `.finally(() => setLoading(false))`: con `StrictMode` la primera petición se aborta y el `finally` pondría `loading` a `false` antes de que llegue la segunda, mostrando un instante "0 cafés / Sin resultados".
+- El buscador y el carrito siguen visibles mientras carga; la frase de número de cafés sólo aparece cuando hay datos.
+
+**Comprobaciones hechas por la IA**
+
+- `npm run build`: sin errores.
+
+**Comprobaciones hechas por la persona**
+
+1. Network: desactivar caché + Slow 4G/3G → se ve "Cargando…" antes de la lista. ✔
+2. Bloquear `coffees.json` y recargar → mensaje de error. Desbloquear → seis cafés. ✔
+3. "zzz" → "Sin resultados" (no el error). ✔
+
+**📝 Respuesta O3** (para el README)
+
+> ¿Por qué la petición va dentro de un `useEffect` y no directamente en el cuerpo del componente? ¿Qué significa el `[]` del final?
+
+El cuerpo del componente se ejecuta en cada render. Si el `fetch` estuviera ahí, al llegar los datos `setCoffees` provocaría un nuevo render, que lanzaría otro `fetch`, y así en bucle. `useEffect` saca la petición del render: React pinta primero y ejecuta el efecto después, sólo cuando cambian sus dependencias. El `[]` es la lista de dependencias: al estar vacía, el efecto se ejecuta una sola vez, al montar el componente (y su limpieza, al desmontarlo).

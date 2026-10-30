@@ -1,37 +1,37 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CoffeeCard } from "./coffee-card";
 import type { Coffee } from "./model";
 
-const coffees: Coffee[] = [
-  {
-    id: 1,
-    name: "Etiopía Yirgacheffe",
-    origin: "Etiopía",
-    roast: "light",
-    price: 14.9,
-    notes: "Floral, bergamota y té negro.",
-  },
-  {
-    id: 2,
-    name: "Colombia Huila",
-    origin: "Colombia",
-    roast: "medium",
-    price: 12.9,
-    notes: "Caramelo y manzana roja.",
-  },
-  {
-    id: 3,
-    name: "Kenia AA",
-    origin: "Kenia",
-    roast: "light",
-    price: 15.5,
-    notes: "Frutos rojos y pomelo.",
-  },
-];
-
 export function App() {
+  const [coffees, setCoffees] = useState<Coffee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [cart, setCart] = useState<Coffee[]>([]);
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch("/coffees.json", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json() as Promise<Coffee[]>;
+      })
+      .then((data) => {
+        setCoffees(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        // Una petición cancelada al desmontar no es un error de carga.
+        if (controller.signal.aborted) return;
+        setError("No se han podido cargar los cafés. Inténtalo de nuevo más tarde.");
+        setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, []);
 
   const filteredCoffees = coffees.filter((coffee) =>
     coffee.name.toLowerCase().includes(search.trim().toLowerCase()),
@@ -50,7 +50,6 @@ export function App() {
   return (
     <main>
       <h1>Tueste</h1>
-      <p>{coffees.length} cafés este mes</p>
       <section
         aria-label="Carrito"
         className="flex items-center justify-between rounded-lg bg-white p-4 shadow-sm"
@@ -71,16 +70,27 @@ export function App() {
           onChange={(event) => setSearch(event.target.value)}
         />
       </div>
-      {filteredCoffees.length === 0 ? (
-        <p>Sin resultados</p>
+      {loading ? (
+        <p role="status">Cargando…</p>
+      ) : error ? (
+        <p role="alert" className="rounded-lg bg-red-100 p-4 text-red-800">
+          {error}
+        </p>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {filteredCoffees.map((coffee) => (
-            <li key={coffee.id}>
-              <CoffeeCard coffee={coffee} onAdd={addToCart} />
-            </li>
-          ))}
-        </ul>
+        <>
+          <p>{coffees.length} cafés este mes</p>
+          {filteredCoffees.length === 0 ? (
+            <p>Sin resultados</p>
+          ) : (
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {filteredCoffees.map((coffee) => (
+                <li key={coffee.id}>
+                  <CoffeeCard coffee={coffee} onAdd={addToCart} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </main>
   );

@@ -6,8 +6,8 @@ Estados: pendiente · en curso · pendiente de comprobación manual · terminado
 | --- | --- | --- |
 | 00 · Preparar el proyecto | Preparación | terminado |
 | 01 · Catálogo y tarjeta | O1 | terminado |
-| 02 · Añadir y vaciar carrito | O2 · parte 1 | pendiente |
-| 03 · Buscador controlado | O2 · parte 2 | pendiente |
+| 02 · Añadir y vaciar carrito | O2 · parte 1 | terminado |
+| 03 · Buscador controlado | O2 · parte 2 | terminado |
 | 04 · Carga y estados de petición | O3 | pendiente |
 | 05 · Extraer useCoffees | O4 · parte 1 | pendiente |
 | 06 · Foco con useRef | O4 · parte 2 | pendiente |
@@ -80,6 +80,74 @@ En `src/` está el código que se compila: Vite lo transforma (TypeScript → Ja
 2. Cuarto café temporal en el array: aparece la tarjeta y el número cambia solo. (La primera vez se añadió por error al JSON; se restauró.)
 3. Sin `key`: aviso en consola. Cambios temporales deshechos después.
 
-**Pendiente**
+**📝 Respuesta O1** (para el README)
 
-- Respuesta 📝 de O1 (aviso sin `key` e id frente a índice), con palabras de la persona.
+> ¿Qué aviso da React sin `key` y para qué la necesita? ¿Por qué `coffee.id` y no el índice?
+
+React avisa en consola: *"Each child in a list should have a unique "key" prop"*. La `key` le sirve para saber qué elemento es cada uno entre un render y el siguiente: así, si la lista cambia, sabe cuál se ha añadido, quitado o movido y sólo toca ese. Usamos `coffee.id` porque identifica siempre al mismo café; el índice depende de la posición, y si se filtra, se borra o se reordena la lista, el mismo índice pasa a ser otro café y React puede reutilizar el elemento equivocado.
+
+---
+
+## Paso 02 · Añadir y vaciar carrito (O2 · parte 1)
+
+**Cambios**
+
+- `CoffeeCard`: nueva prop `onAdd: (coffee: Coffee) => void` y botón "Añadir al carrito" con `onClick={() => onAdd(coffee)}`.
+- `App`: estado `cart` (`useState<Coffee[]>([])`); `addToCart` con `setCart((previous) => [...previous, coffee])`; `emptyCart` con `setCart([])`.
+- Resumen "N bolsas · total €" y botón "Vaciar" con `disabled={bagCount === 0}`.
+
+**Decisiones**
+
+- `bagCount` y `total` se calculan en el render (`cart.length` y `reduce`): no son estado.
+- Actualización funcional (`previous => ...`) y sin mutar: se crea un array nuevo.
+- El carrito guarda un café por bolsa (se puede repetir). No se pinta la lista del carrito, así que no hay riesgo de keys duplicadas.
+- `aria-live="polite"` en el resumen para que un lector de pantalla anuncie los cambios; botones con `type="button"`.
+
+**Comprobaciones hechas por la IA**
+
+- `npm run build`: sin errores.
+
+**Comprobaciones hechas por la persona**
+
+1. Añadir tres bolsas: cambian contador y total. ✔
+2. Vaciar: ambos a 0 y el botón se desactiva. ✔
+3. Aviso de consola sin `key` confirmado (paso 01). ✔
+
+**📝 Respuestas O2** (para el README)
+
+> ¿Por qué `onAdd={addToCart}` y no `onAdd={addToCart()}`?
+
+Con `addToCart` le pasamos la función a la tarjeta para que la llame cuando se pulse el botón. Con `addToCart()` la función se ejecutaría en ese momento, durante el render, y la tarjeta recibiría lo que devuelve (`undefined`) en lugar de la función. Además, como llama a `setCart`, provocaría un nuevo render que la volvería a ejecutar: un bucle infinito.
+
+> ¿Por qué el total no necesita su propio `useState`? ¿Qué problema habría si lo fuera?
+
+Porque se puede calcular a partir de `cart` en cada render: es un dato derivado, no información nueva. Si fuera un estado tendríamos el mismo dato guardado dos veces y habría que actualizar los dos a la vez; si en algún sitio se olvida (por ejemplo al vaciar), el total y el carrito dejarían de coincidir.
+
+---
+
+## Paso 03 · Buscador controlado (O2 · parte 2)
+
+**Cambios**
+
+- `App`: segundo estado `search` (`useState("")`) e input controlado (`value={search}` + `onChange`), con `<label htmlFor>`.
+- `filteredCoffees` se calcula en el render con `filter` + `toLowerCase().includes(...)` (sin distinguir mayúsculas; se ignoran espacios a los lados).
+- Si `filteredCoffees` está vacío: "Sin resultados"; si no, la rejilla.
+
+**Decisiones**
+
+- La frase "N cafés este mes" sigue contando el catálogo completo, no los resultados del filtro.
+- Estados en este punto: sólo `cart` y `search`.
+
+**Comprobaciones hechas por la IA**
+
+- `npm run build`: sin errores.
+
+**Comprobaciones hechas por la persona**
+
+1. "ken" → sólo Kenia AA. ✔
+2. "zzz" → "Sin resultados". ✔
+3. Borrar el texto → vuelven los tres. ✔
+
+**Comprensión: ¿qué problemas introduce guardar también la lista filtrada en un estado?**
+
+La lista filtrada depende de dos datos, `coffees` y `search`. Si fuera un estado, habría que actualizarla a mano cada vez que cambiara cualquiera de los dos; basta con olvidarse en un sitio para que la lista mostrada no coincida con la búsqueda ni con los cafés reales. Además, si se sincronizase con un `useEffect`, cada tecla provocaría dos renders y el primero pintaría la lista antigua. Como filtrar es un cálculo barato, es más simple y seguro recalcularla en cada render: así siempre es correcta.
